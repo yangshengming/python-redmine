@@ -11,7 +11,8 @@ from .exceptions import (
     ReadonlyAttrError,
     CustomFieldValueError,
     ResourceVersionMismatchError,
-    ResourceNotFoundError
+    ResourceNotFoundError,
+    JSONDecodeError
 )
 
 # Resources which when accessed from some other
@@ -406,6 +407,23 @@ class Issue(_Resource):
             url = '{0}/issues/{1}/watchers/{2}.json'.format(self._redmine.url, self._issue_id, user_id)
             return self._redmine.request('delete', url)
 
+    class PendingEffort:
+        """An issue pending effort implementation"""
+        def __init__(self, issue):
+            self._redmine = issue.manager.redmine
+            self._issue_id = issue.internal_id
+
+        def update(self, value=None):
+            url = '{0}/issues/{1}/pending_effort.json'.format(self._redmine.url, self._issue_id)
+            return self._redmine.request('post', url, data={'value': value})
+
+        def multi_update(self, pending_efforts):
+            url = '{0}/issues/{1}/pending_efforts.json'.format(self._redmine.url, self._issue_id)
+            try:
+                return self._redmine.request('post', url, data={'pending_efforts': pending_efforts})
+            except JSONDecodeError:
+                pass
+
     @classmethod
     def translate_params(cls, params):
         if 'version_id' in params:
@@ -418,6 +436,8 @@ class Issue(_Resource):
             return super(Issue, self).__getattr__('fixed_version')
         elif item == 'watcher':
             return Issue.Watcher(self)
+        elif item == 'pending_effort':
+            return Issue.PendingEffort(self)
         elif item == 'parent' and item in self._attributes:
             return ResourceManager(self.manager.redmine, 'Issue').to_resource(self._attributes[item])
 
