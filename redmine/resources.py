@@ -12,7 +12,8 @@ from .exceptions import (
     CustomFieldValueError,
     ResourceVersionMismatchError,
     ResourceNotFoundError,
-    JSONDecodeError
+    JSONDecodeError,
+    UnknownError
 )
 
 # Resources which when accessed from some other
@@ -69,6 +70,7 @@ _RESOURCE_RELATIONS_MAP = {
     'contacts': 'Contact',
     'deals': 'Deal',
     'deal_categories': 'DealCategory',
+    'pbi': 'Pbi',
 }
 
 # Resource attributes which when set should
@@ -1107,3 +1109,26 @@ class DealCategory(_Resource):
     @property
     def url(self):
         return '{0}/deal_categories/edit?id={1}'.format(self.manager.redmine.url, self.internal_id)
+
+class Pbi(Issue):
+    """PBI implementation"""
+    def update(self, notes):
+        url = '{0}/scrum/{1}/update_pbi.json'.format(self.manager.redmine.url, self.internal_id)
+        try:
+            return self.manager.redmine.request('post', url, data={"issue": {"notes": notes}})
+        except UnknownError:
+            pass
+
+    def move_forward(self):
+        url = '{0}/scrum/{1}/move_to_last_sprint.json'.format(self.manager.redmine.url, self.internal_id)
+        try:
+            return self.manager.redmine.request('post', url)
+        except UnknownError:
+            pass
+
+    def move_back(self):
+        url = '{0}/scrum/{1}/move_to_product_backlog.json'.format(self.manager.redmine.url, self.internal_id)
+        try:
+            return self.manager.redmine.request('post', url)
+        except UnknownError:
+            pass
